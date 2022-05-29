@@ -3,35 +3,45 @@ from consts import *
 import os
 from time import sleep
 from util import *
-from packets.initialization import InitializationPacket
-from commands import init
+from commands.handle import handle
+from message import Message
 
 device_path = "/dev/hidg0"
+
+current_message = None 
 
 def write(bytes):
     with open(device_path, "rb+") as fd:
         fd.write(bytes)
 
 def parse_packet(packet):
+    global current_message
     print("parsing packet", packet, len(packet))
     cmd = packet[4]
     is_init = cmd >= 0x80 # bit 7 set
-    print("is_init", is_init)
-    cid = int.from_bytes(packet[:4], "big")
-    if is_init:
-        data_len = packet[5] << 8 | packet[6]
-        segment_end = min(data_len + 7, 64)
-        data = packet[7:segment_end]
-        print(cid, cmd, data)
-        initialization_packet = InitializationPacket(cid=1, cmd=cmd, data=data)
-        response = init.handle(initialization_packet)
-        write(response)
+    if is_init: # is an initialization packet
+        if current_message == None: # we are not currently processing anything
+            current_message = Message(packet)
+        else:
+            print("busy :(") # TODO: send an error response
+    else: # is a continuation packet
+        if current_message == None:
+            raise Exception("Spurious continuation packet without initialization packet")
+        else: 
+            cid = int.from_bytes(packet[:4], "big")
+            if cid == current_message.cid:
+                current_message.process_cont_packet(packet)
+    if current_message != None and current_message.done:
+        # handle message
+        response = handle(current_message)
+        current_message = None
+        if response:
+            write(response)
 
 def read():
     report = None
     with open(device_path, "rb+") as fd:
         report = fd.read(64)
-        print("report", f"b'{format_bytes(report)}'", None if report == None else len(report))
         if (len(report) == 64):
             parse_packet(report)
     return report
