@@ -1,21 +1,21 @@
-HID_RPT_SIZE = 64 # Default size of raw HID report
-CID_BROADCAST = 0xffffffff # Broadcast channel id
+HID_RPT_SIZE = 64  # Default size of raw HID report
+CID_BROADCAST = 0xffffffff  # Broadcast channel id
 
-TYPE_MASK = 0x80 # Frame type mask
-TYPE_INIT = 0x80 # Initial frame identifier
-TYPE_CONT = 0x00 # Continuation frame identifier
+TYPE_MASK = 0x80  # Frame type mask
+TYPE_INIT = 0x80  # Initial frame identifier
+TYPE_CONT = 0x00  # Continuation frame identifier
 
-U2FHID_PING = (TYPE_INIT | 0x01) # 129
-U2FHID_MSG = (TYPE_INIT | 0x03) # 131
-U2FHID_LOCK = (TYPE_INIT | 0x04) # 132
-U2FHID_INIT = (TYPE_INIT | 0x06) # 134
-U2FHID_WINK = (TYPE_INIT | 0x08) # 136
-U2FHID_SYNC = (TYPE_INIT | 0x3c) # 188
-U2FHID_ERROR = (TYPE_INIT | 0x3f) # 191
+U2FHID_PING = (TYPE_INIT | 0x01)  # 129
+U2FHID_MSG = (TYPE_INIT | 0x03)  # 131
+U2FHID_LOCK = (TYPE_INIT | 0x04)  # 132
+U2FHID_INIT = (TYPE_INIT | 0x06)  # 134
+U2FHID_WINK = (TYPE_INIT | 0x08)  # 136
+U2FHID_SYNC = (TYPE_INIT | 0x3c)  # 188
+U2FHID_ERROR = (TYPE_INIT | 0x3f)  # 191
 
-U2FHID_IF_VERSION = 2 # Current interface implementation version
-CAPFLAG_WINK = 0x01	# Device supports WINK command
-CAPFLAG_LOCK = 0x02	# Device supports LOCK command
+U2FHID_IF_VERSION = 2  # Current interface implementation version
+CAPFLAG_WINK = 0x01  # Device supports WINK command
+CAPFLAG_LOCK = 0x02  # Device supports LOCK command
 
 U2F_REGISTER = 0x01
 U2F_AUTHENTICATE = 0x02
