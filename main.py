@@ -18,7 +18,7 @@ def write(bytes):
 
 def parse_packet(packet):
     global current_message
-    print("parsing packet", packet, len(packet))
+    print("parsing packet", format_bytes(packet), len(packet))
     cmd = packet[4]
     is_init = cmd >= 0x80  # bit 7 set
     if is_init:  # is an initialization packet
@@ -36,10 +36,11 @@ def parse_packet(packet):
                 current_message.process_cont_packet(packet)
     if current_message != None and current_message.done:
         # handle message
-        response = handle(current_message)
+        packets = handle(current_message)
         current_message = None
-        if response:
-            write(response)
+        if packets:
+            for response_packet in packets:
+                write(response_packet)
 
 
 def read():

@@ -1,2 +1,4 @@
 usb_hid.py
 __pycache__
+*.pem
+*.der

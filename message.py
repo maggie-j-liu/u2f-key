@@ -39,7 +39,8 @@ class Message:
         data_end = min(len(data), bytes_needed)
         self.data[self.data_cursor:self.data_cursor +
                   data_end] = data[:data_end]
-        self.data_cursor += len(data)
+
+        self.data_cursor += data_end
         self.done = self.data_cursor == self.data_len
         if not self.done:
             self.next_cont_packet = seq + 1
