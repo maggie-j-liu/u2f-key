@@ -4,6 +4,7 @@ from cryptography.hazmat.primitives.asymmetric.ec import *
 from cryptography.hazmat.primitives.serialization import *
 from cryptography.hazmat.primitives import hashes
 from util import *
+from data import Data
 
 
 def handle(message: Message):
@@ -11,18 +12,23 @@ def handle(message: Message):
     data = message.data
     ins = data[1]
     p1 = data[2]
-    req_data_len = (data[4] << 16) | (data[5] << 8) | data[6]
     print("ins", ins)
     if ins == U2F_REGISTER:
+        req_data_len = (data[4] << 16) | (data[5] << 8) | data[6]
         # TODO: validate that req_data_len is 64
         req_data = data[7:7 + req_data_len]
         challenge_param = req_data[:32]
         application_param = req_data[32:]
         # generate new keypair
-        public_key = generate_private_key(
-            curve=SECP256R1).public_key().public_bytes(encoding=Encoding.X962, format=PublicFormat.UncompressedPoint)
+        private_key = generate_private_key(curve=SECP256R1)
+        public_key = private_key.public_key().public_bytes(
+            encoding=Encoding.X962, format=PublicFormat.UncompressedPoint)
         # print("public key", format_bytes(public_key), len(public_key))
         key_handle = bytes((1,))
+        Data.key_handle = key_handle
+        Data.private_key = private_key
+        Data.application_param = application_param
+        Data.counter += 1
         key_handle_len = len(key_handle).to_bytes(1, byteorder="big")
         cert_file = open("keys/certificate.der", "rb")
         attestation_cert = cert_file.read()
@@ -34,12 +40,8 @@ def handle(message: Message):
         )
         key_file.close()
 
-        print("app param", format_bytes(application_param),
-              "chal param", format_bytes(challenge_param))
         sig_data = bytes((0,)) + application_param + \
             challenge_param + key_handle + public_key
-        print(len(application_param), len(challenge_param),
-              len(key_handle), len(public_key))
         signature = attestation_key.sign(
             sig_data,
             ECDSA(hashes.SHA256())
@@ -49,11 +51,57 @@ def handle(message: Message):
         res_data = bytes((5,)) + public_key + key_handle_len + \
             key_handle + attestation_cert + signature
         # status words
-        res_data += bytes((0x90, 0x00))
-        print(len(public_key), len(key_handle_len), len(
-            key_handle), len(attestation_cert), len(signature))
+        res_data += SW_NO_ERROR.to_bytes(2, byteorder="big")
         # print("res data", format_bytes(res_data))
         response = build_response(message.cid, message.cmd, res_data)
-        input("type to simulate touching the key")
+        input("type to simulate touching the key: ")
         return response
-    return False
+    elif ins == U2F_AUTHENTICATE:
+        req_data_len = (data[4] << 16) | (data[5] << 8) | data[6]
+        req_data = data[7:7 + req_data_len]
+        print("all data", format_bytes(data))
+        print("req_data", format_bytes(req_data))
+        control_byte = p1
+        challenge_param = req_data[0:32]
+        application_param = req_data[32:64]
+        key_handle_len = req_data[64]
+        key_handle = req_data[65:65 + key_handle_len]
+        if application_param != Data.application_param or key_handle != Data.key_handle:
+            print('wrong application param or key handle', Data.application_param,
+                  Data.key_handle, application_param, key_handle)
+            return build_response(
+                message.cid, message.cmd, SW_WRONG_DATA.to_bytes(
+                    2, byteorder="big"
+                )
+            )
+        print("control byte", control_byte)
+        if control_byte == 0x70:  # check only
+            # already verified key handle above
+            return build_response(
+                message.cid, message.cmd, SW_CONDITIONS_NOT_SATISFIED.to_bytes(
+                    2, byteorder="big"
+                )
+            )
+        elif control_byte == 0x03 or control_byte == 0x08:
+            user_presence = bytes(
+                (0,)) if control_byte == 0x08 else bytes((1,))
+            counter = Data.counter.to_bytes(4, byteorder="big")
+            sig_data = application_param + user_presence + counter + challenge_param
+            signature = Data.private_key.sign(
+                sig_data,
+                ECDSA(hashes.SHA256())
+            )
+            if control_byte == 0x03:
+                input("type to simulate touching the key: ")
+            res_data = user_presence + counter + signature + \
+                SW_NO_ERROR.to_bytes(2, byteorder="big")
+            print('response data', format_bytes(res_data))
+            return build_response(
+                message.cid, message.cmd, res_data
+            )
+        else:
+            raise Exception(f"Unrecognized control byte {control_byte}")
+    elif ins == U2F_VERSION:
+        return build_response(message.cid, message.cmd, b'U2F_V2' + SW_NO_ERROR.to_bytes(2, byteorder="big"))
+    else:
+        raise Exception(f"Unrecognized ins {ins}")

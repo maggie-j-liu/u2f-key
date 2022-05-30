@@ -1,6 +1,4 @@
-import usb_hid
 from consts import *
-import os
 from time import sleep
 from util import *
 from commands.handle import handle
