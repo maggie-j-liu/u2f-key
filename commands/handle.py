@@ -1,6 +1,6 @@
 from message import Message
 from consts import *
-from commands import init, msg
+from commands import init, msg, ping
 
 
 def handle(message: Message):
@@ -8,8 +8,10 @@ def handle(message: Message):
         return init.handle(message)
     elif message.cmd == U2FHID_MSG:
         return msg.handle(message)
-    elif message.cmd == U2FHID_PING or message.cmd == U2FHID_SYNC:
-        print(f"Unimplemented command: {message.cmd}")
+    elif message.cmd == U2FHID_PING:
+        return ping.handle(message)
+    elif message.cmd == U2FHID_SYNC:
+        print("handling sync")
         return False
     else:  # unrecognized command
         response = bytearray(HID_RPT_SIZE)
