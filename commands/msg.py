@@ -41,7 +41,6 @@ def handle(message: Message):
         nonce = os.urandom(13)
         key_handle = nonce + \
             aesccm.encrypt(nonce, private_key_bytes, bytes(application_param))
-        Data.counter += 1
         key_handle_len = len(key_handle).to_bytes(1, byteorder="big")
         print("key handle", key_handle, len(key_handle))
         cert_file = open("keys/certificate.der", "rb")
@@ -123,6 +122,7 @@ def handle(message: Message):
             res_data = user_presence + counter + signature + \
                 SW_NO_ERROR.to_bytes(2, byteorder="big")
             print('response data', format_bytes(res_data))
+            Data.counter += 1
             return build_response(
                 message.cid, message.cmd, res_data
             )
